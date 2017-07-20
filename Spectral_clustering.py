@@ -12,8 +12,8 @@ class Graph:
         self.map = maps  # 图的矩阵结构
         self.nodenum = len(maps)
         self.edgenum = edgenum
-        self.W = maps
-        self.path = maps
+        self.W = np.zeros((len(maps), len(maps)))#maps
+        self.path = np.zeros((len(maps), len(maps)))
 
     def isOutRange(self, x):
         try:
@@ -145,7 +145,7 @@ class Graph:
             for i in range(self.nodenum):
                 for j in range(self.nodenum):
                     if(self.W[i][k] != 0 and self.W[k][j] != 0):
-                        if(self.W[i][k] + self.W[k][j] < self.W[i][j]):
+                        if((self.W[i][k] + self.W[k][j] < self.W[i][j]) or (self.W[i][j] == 0 and i!=j)):
                             self.W[i][j] = self.W[i][k] + self.W[k][j]
                             self.path[i][k] = i
                             self.path[i][j] = self.path[k][j]
@@ -206,17 +206,61 @@ def plot(matrix,C,centers,k):
         plt.plot(centers[i][0],centers[i][1],'rx')
     plt.show()
 
+# 路径乘积/路径个数
+def printPath(path, W, fro, to):
+    i = 0
+    distance = 1
+    while(path[fro][to] != fro):
+        i = i + 1
+        distance = distance * W[path[fro][to]][to]
+        to = path[fro][to]
+    i = i + 1
+    distance = distance * W[fro][to]
+    return distance/i
+
+def Similarity_matrix(W):
+    M = np.zeros((len(W), len(W)))
+    for i in range(len(W)):
+        for j in range(len(W)):
+            if W[i][j] != 0:
+                M[i][j] = 1 / W[i][j]
+    return M
+
 # 谱聚类算法
 def Spectral_clustering():
-    x1 = [[0, 2, 4, 1], [3, 0, 6, 7], [7, 5, 0, 2], [3, 1, 5, 0]]
-    x1 = np.array(x1)
-    W = getWbyKNN(x1, 2)
+
+    maps = [
+        [0, 3, 5, 8, 0],
+        [3, 0, 8, 4, 11],
+        [5, 6, 0, 2, 0],
+        [8, 4, 2, 0, 10],
+        [0, 11, 0, 10, 0]
+    ]
+    G = Graph(maps)
+    print G.map
+    G.Similarity_matrix()
+    W1 = G.W
+    print W1
+    path = G.path
+    print path
+
+    M = Similarity_matrix(W1)
+
+    # 用KNN得到W矩阵，用W得到D矩阵
+    W = getWbyKNN(M, 2)             # k=2
     D = getD(W)
     print W
     print D
+
+    # 得到拉普拉斯矩阵
     L = D - W
-    cluster_num = 3
+    cluster_num = 3                 # cluster = 3
+
+    # 取出前cluster_num小的特征值对应的特征向量
     eigval, eigvec = getEigVec(L, cluster_num)
+
+    # 获得特征矩阵之后，我们使用kmeans方法来对特征矩阵进行一个聚类，每个特征向量是特征矩阵的列，而每行当成一个聚类样本。这样一聚类就是最终的成果了。
+    # 直接使用sklearn中的KMeans函数来调用：
     clf = KMeans(n_clusters=cluster_num)
     s = clf.fit(eigvec)
     C = s.labels_
@@ -227,18 +271,31 @@ def Spectral_clustering():
 # 测试图类的函数
 def DoTest():
     maps = [
-        [-1, 1, 0, 0],
-        [0, -1, 0, 0],
-        [0, 0, -1, 1],
-        [1, 0, 0, -1]]
+        [0, 3, 5, 8, 0],
+        [3, 0, 8, 4, 11],
+        [5, 6, 0, 2, 0],
+        [8, 4, 2, 0, 10],
+        [0, 11, 0, 10 , 0]
+        ]
     G = Graph(maps)
-    G.InsertNode()
-    G.AddEdge(1, 4)
-    print("广度优先遍历")
-    G.BreadthFirstSearch()
-    print("深度优先遍历")
-    G.DepthFirstSearch()
+    #G.InsertNode()
+    #G.AddEdge(1, 4)
+    #print("广度优先遍历")
+    #G.BreadthFirstSearch()
+    #print("深度优先遍历")
+    #G.DepthFirstSearch()
+    print G.map
+    G.Similarity_matrix()
+    W = G.W
+    path = G.path
+    print path
+    print W
+    i = printPath(path, W, 0, 3) #另一种方法计算从0到3的相似度
+    print i
+    M = Similarity_matrix(W)
+    print M
 
 if __name__ == '__main__':
-    DoTest()
+    #DoTest()
+    Spectral_clustering()
 
