@@ -14,6 +14,23 @@ class Graph:
         self.edgenum = edgenum
         self.W = np.zeros((len(maps), len(maps)))#maps
         self.path = np.zeros((len(maps), len(maps)))
+        self.W_Bellman_Ford = np.zeros((len(maps), len(maps)))
+        self.path_Bellman_Ford = np.zeros((len(maps), len(maps)))
+        self.edge = []
+        e = []
+        for i in range(self.nodenum):
+            for j in range(self.nodenum):
+                if(self.map[i][j] != 0):
+                    e.append(i)
+                    e.append(j)
+                    e.append(self.map[i][j])
+                    e1 = e[:] # 之前没有这一步，list赋值为引用赋值
+                    self.edge.append(e1)
+                e[:] = []
+        #for m in self.edge:
+        #    print "11111"
+        #    print m
+        #    print "22222"
 
     def isOutRange(self, x):
         try:
@@ -136,19 +153,53 @@ class Graph:
         for row in range(self.nodenum):
             for col in range(self.nodenum):
                 self.W[row][col] = self.map[row][col]
-                if(self.map[row][col] == 0):
-                    self.path[row][col] = 0
-                else:
+                if(self.map[row][col] != 0 and row != col):
                     self.path[row][col] = row
+                else:
+                    self.path[row][col] = -1 # -1表示i j不通
 
         for k in range(self.nodenum):
             for i in range(self.nodenum):
                 for j in range(self.nodenum):
                     if(self.W[i][k] != 0 and self.W[k][j] != 0):
-                        if((self.W[i][k] + self.W[k][j] < self.W[i][j]) or (self.W[i][j] == 0 and i!=j)):
+                        if((self.W[i][k] + self.W[k][j] < self.W[i][j]) or (self.W[i][j] == 0 and i != j)): # 0表示不通或者无穷大
                             self.W[i][j] = self.W[i][k] + self.W[k][j]
-                            self.path[i][k] = i
                             self.path[i][j] = self.path[k][j]
+
+    # 最短路径算法，Bellman_Ford算法
+    # Bellman-Ford算法的结果是一个bool值，表明图中是否存在着从源点s可达的负权回路。
+    # 若不存在这样的回路，算法将给出从源点s到图G任意顶点v的最短路径dist[v]；
+    # 若存在这样的回路，说明该问题无解，即存在一个从源点s到某一个点的最短路径趋向于负无穷(无限循环可得)
+    def Bellman_Ford(self, original):
+        for i in range(self.nodenum):
+            if i == original:
+                self.W_Bellman_Ford[original][i] = 0
+            else:
+                self.W_Bellman_Ford[original][i] = 1000000 # max
+            if self.map[original][i] != 0:
+                self.W_Bellman_Ford[original][i] = self.map[original][i]
+                self.path_Bellman_Ford[original][i] = original
+            else:
+                self.path_Bellman_Ford[original][i] = -1 # -1表示不通
+
+        # 如果在某一遍的迭代中，并没有进行松弛操作，说明该遍迭代所有边都没有松弛，可以证明， 至此以后，所有的边都不需要再松弛，因此可以提前结束迭代过程。
+        for j in range(self.nodenum):
+            flag_end = False
+            for e in range(len(self.edge)):
+                if self.W_Bellman_Ford[original][(self.edge[e])[1]] > self.W_Bellman_Ford[original][(self.edge[e])[0]] + (self.edge[e])[2]:
+                    self.W_Bellman_Ford[original][(self.edge[e])[1]] = self.W_Bellman_Ford[original][(self.edge[e])[0]] + (self.edge[e])[2]
+                    self.path_Bellman_Ford[original][(self.edge[e])[1]] = (self.edge[e])[0] # 记录前驱顶点
+                    flag_end = True
+            if(flag_end == False):
+                break
+
+        flag = True # 判断是否含有负权回路,True表示不存在负权值回路
+        # 检验负权回路：判断边集E中的每一条边的两个端点是否收敛。如果存在未收敛的顶点，则算法返回false，表明问题无解。
+        for e1 in range(len(self.edge)):
+            if self.W_Bellman_Ford[original][(self.edge[e1])[1]] > self.W_Bellman_Ford[original][(self.edge[e1])[0]] + (self.edge[e1])[2]:
+                flag = False
+                break
+        return flag
 
 # 欧式距离
 def distance(p1,p2):
@@ -231,7 +282,7 @@ def Spectral_clustering():
 
     maps = [
         [0, 3, 5, 8, 0],
-        [3, 0, 8, 4, 11],
+        [3, 0, 6, 4, 11],
         [5, 6, 0, 2, 0],
         [8, 4, 2, 0, 10],
         [0, 11, 0, 10, 0]
@@ -290,12 +341,20 @@ def DoTest():
     path = G.path
     print path
     print W
+
+    for i in range(G.nodenum):
+        G.Bellman_Ford(i)
+    W1 = G.W_Bellman_Ford
+    path1 = G.path_Bellman_Ford
+    print W1
+    print path1
+
     i = printPath(path, W, 0, 3) #另一种方法计算从0到3的相似度
     print i
     M = Similarity_matrix(W)
     print M
 
 if __name__ == '__main__':
-    #DoTest()
-    Spectral_clustering()
+    DoTest()
+    #Spectral_clustering()
 
