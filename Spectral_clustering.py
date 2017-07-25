@@ -277,6 +277,36 @@ def Similarity_matrix(W):
                 M[i][j] = 1 / W[i][j]
     return M
 
+# 聚类个数评价函数,模块度函数
+# len(k)为聚类个数,W为权重矩阵 k = [[],[]]
+# Q_pk表示网络中社团内部边的概率减去网络中同一社团结构下结点间任意连接边的概率的期望值。
+# 数值越大，表示图的聚类效果越好。在实际网络中的取值范围常常为0.3~0.7。
+def Q(k, W):
+    Q_pk = 0
+    A_V_V = 0
+    A_Vc_Vc = 0
+    A_Vc_V = 0
+    for i in range(len(W)):
+        for j in range(len(W)):
+            if W[i][j] != 0:
+                A_V_V = W[i][j] + A_V_V
+    for i in range(len(k)):
+        # k[i]
+        for j1 in k[i]:
+            for j2 in k[i]:
+                if W[j1][j2] != 0:
+                    A_Vc_Vc = W[j1][j2] + A_Vc_Vc
+            for j3 in range(len(W)):
+                if W[j1][j3] != 0:
+                    A_Vc_V = W[j1][j3] + A_Vc_V
+                if W[j3][j1] != 0:
+                    A_Vc_V = W[j3][j1] + A_Vc_V
+        A_Vc_V = A_Vc_V - A_Vc_Vc
+        Q_pk = Q_pk + ( A_Vc_Vc / A_V_V - ( A_Vc_V / A_V_V ) ^ 2 )
+        A_Vc_Vc = 0
+        A_Vc_V = 0
+    return Q_pk
+
 # 谱聚类算法
 def Spectral_clustering():
 
